@@ -1,0 +1,174 @@
+import db.Boards;
+import db.Users;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class Main {
+    private static List<Boards> boards = new ArrayList<>();
+    private static List<Users> users = new ArrayList<>();
+    private static Connection conn = null;
+    //게시판
+    static String title, content = null;
+    //회원
+    static String userId, password, tel = null;
+    static String idCheck, pwCheck = null;
+
+    public static Connection dbConn() {
+        if (conn == null) {
+            try {
+                // JDBC 등록
+                Class.forName("oracle.jdbc.OracleDriver");
+                // 연결
+                conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521/xe", "javadb", "1234");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return conn;
+    }
+
+    public static void dbExit() {
+        if (conn != null) {
+            try {
+                conn.close();
+                conn = null;
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void boardInsert() {
+        String sql = "INSERT INTO BOARDS(board_id, title, content, creation_date, user_id) " +
+                     "VALUES (seq_board_id.nextval, ?, ?, sysdate, ?)";
+
+        try (PreparedStatement pstmt = dbConn().prepareStatement(sql, new String[]{"board_id"})) {
+            pstmt.setString(1, title);
+            pstmt.setString(2, content);
+            pstmt.setString(3, idCheck);
+            pstmt.executeUpdate();
+            System.out.println("게시글이 성공적으로 작성되었습니다.");
+        } catch (SQLException e) {
+            System.out.println("로그인이 되어 있지않습니다.");
+//            e.printStackTrace();
+        }
+    }
+
+    public static void join() {
+        String sql = "INSERT INTO USERS(user_id, password, tel)" +
+                     "VALUES (?, ?, ?)";
+
+        try (PreparedStatement pstmt = dbConn().prepareStatement(sql)) {
+            pstmt.setString(1, userId);
+            pstmt.setString(2, password);
+            pstmt.setString(3, tel);
+            pstmt.executeUpdate();
+            System.out.println("회원가입이 성공적으로 완료되었습니다.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static boolean login(String idCheck, String password) {
+        String sql = "SELECT password FROM USERS WHERE user_id = ?";
+        try (Connection conn = dbConn();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, idCheck);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String dbPassword = rs.getString("password");
+                    if (dbPassword.equals(password)) {
+                        return true;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        boolean run = true;
+
+        while (run) {
+            System.out.println("--------------------------");
+            System.out.println("1.게시판 |  2.회원  | 3.종료");
+            System.out.println("--------------------------");
+            System.out.print("메뉴 선택> ");
+
+            int selectNum = sc.nextInt();
+            sc.nextLine();
+
+            if (selectNum == 1) {
+                System.out.println("----------------------게시판 메뉴-----------------------------------");
+                System.out.println("1.게시글 작성 | 2.게시글 조회 | 3.게시글 수정 | 4.게시글 삭제 | 5.이전메뉴");
+                System.out.println("------------------------------------------------------------------");
+                System.out.print("메뉴 선택> ");
+
+                int boardNum = sc.nextInt();
+                sc.nextLine();
+
+                if (boardNum == 1) {
+                    System.out.println("게시글 작성");
+                    System.out.print("제목 : ");
+                    title = sc.nextLine();
+                    System.out.print("내용 : ");
+                    content = sc.nextLine();
+                    boardInsert();
+                }
+
+            } else if (selectNum == 2) {
+                System.out.println("-------------------------------");
+                System.out.println("1.회원 가입 | 2.로그인 | 3.이전메뉴");
+                System.out.println("-------------------------------");
+                System.out.print("메뉴 선택> ");
+
+                int userNum = sc.nextInt();
+                sc.nextLine();
+
+                if (userNum == 1) {
+                    System.out.println("회원 가입");
+                    System.out.print("아이디 : ");
+                    userId = sc.nextLine();
+                    System.out.print("패스워드 : ");
+                    password = sc.nextLine();
+                    System.out.print("연락처 : ");
+                    tel = sc.nextLine();
+                    join();
+                }
+
+                if (userNum == 2) {
+                    System.out.println("로그인");
+                    System.out.print("아이디 : ");
+                    idCheck = sc.nextLine();
+                    System.out.print("비밀번호 : ");
+                    pwCheck = sc.nextLine();
+
+                    if (login(idCheck, pwCheck)) {
+                        System.out.println("로그인 성공");
+                    } else {
+                        System.out.println("로그인 실패. 아이디나 비밀번호를 확인하세요.");
+                    }
+
+                }
+
+                if(userNum == 3){
+                    continue;
+                }
+
+            } else if (selectNum == 3) {
+                run = false;
+            }
+
+            dbExit();
+        }
+    }
+}
