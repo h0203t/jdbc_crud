@@ -9,9 +9,13 @@ import java.util.Scanner;
 public class Main {
     private static List<Boards> boards = new ArrayList<>();
     private static List<Users> users = new ArrayList<>();
+
+    public static Scanner sc = new Scanner(System.in);
+
     private static Connection conn = null;
     //게시판
     static String title, content = null;
+    static int boardId;
     //회원
     static String userId, password, tel = null;
     static String idCheck, pwCheck = null;
@@ -43,7 +47,7 @@ public class Main {
 
     public static void boardInsert() {
         String sql = "INSERT INTO BOARDS(board_id, title, content, creation_date, user_id) " +
-                     "VALUES (seq_board_id.nextval, ?, ?, sysdate, ?)";
+                "VALUES (seq_board_id.nextval, ?, ?, sysdate, ?)";
 
         try (PreparedStatement pstmt = dbConn().prepareStatement(sql, new String[]{"board_id"})) {
             pstmt.setString(1, title);
@@ -59,7 +63,7 @@ public class Main {
 
     public static void join() {
         String sql = "INSERT INTO USERS(user_id, password, tel)" +
-                     "VALUES (?, ?, ?)";
+                "VALUES (?, ?, ?)";
 
         try (PreparedStatement pstmt = dbConn().prepareStatement(sql)) {
             pstmt.setString(1, userId);
@@ -79,18 +83,86 @@ public class Main {
 
             pstmt.setString(1, idCheck);
 
-            try (ResultSet rs = pstmt.executeQuery()) {
+            ResultSet rs = pstmt.executeQuery();
                 if (rs.next()) {
                     String dbPassword = rs.getString("password");
                     if (dbPassword.equals(password)) {
                         return true;
                     }
                 }
-            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public static void selectBoards() {
+        String sql = "SELECT board_id, title, content, creation_date, user_id FROM BOARDS";
+
+        try (PreparedStatement pstmt = dbConn().prepareStatement(sql)) {
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                Boards boards = new Boards();
+                boards.setBoardId(rs.getInt("board_id"));
+                boards.setTitle(rs.getString("title"));
+                boards.setContent(rs.getString("content"));
+                boards.setDate(rs.getDate("creation_date"));
+                boards.setUserId(rs.getString("user_id"));
+
+
+                System.out.println("---------------------------------------------------------------------------");
+                System.out.println("NO: " + boards.getBoardId() + " | 제목: " + boards.getTitle() + " | 내용: " + boards.getContent() + " | 작성날짜: " + boards.getDate() + " | 작성자: " + boards.getUserId());
+                System.out.println("---------------------------------------------------------------------------");
+            }
+        } catch (SQLException e) {
+            System.out.println("게시물 작성에 실패하였습니다.");
+//            e.printStackTrace();
+        }
+    }
+
+    public static void updateBoards() {
+        String sql = "UPDATE BOARDS SET TITLE = ?, CONTENT = ? WHERE BOARD_ID = ? AND USER_ID = ?";
+
+        try (PreparedStatement pstmt = dbConn().prepareStatement(sql)) {
+
+            pstmt.setString(1, title);
+            pstmt.setString(2, content);
+            pstmt.setInt(3, boardId);
+            pstmt.setString(4, idCheck);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("수정 완료");
+            } else {
+                System.out.println("수정 실패! 작성한 사용자가 아닙니다.");
+            }
+        } catch (SQLException e) {
+            System.out.println("게시글 수정에 실패하였습니다.");
+//            e.printStackTrace(v);
+        }
+    }
+
+    public static void deleteBoards() {
+        String sql = "DELETE FROM BOARDS WHERE BOARD_ID = ? AND USER_ID = ?";
+
+        try (PreparedStatement pstmt = dbConn().prepareStatement(sql)) {
+
+            pstmt.setInt(1, boardId);
+            pstmt.setString(2, idCheck);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("삭제 완료");
+            } else {
+                System.out.println("삭제 실패! 작성한 사용자가 아닙니다.");
+            }
+        } catch (SQLException e) {
+//            System.out.println("게시글 수정에 실패하였습니다.");
+            e.printStackTrace();
+        }
     }
 
 
@@ -108,7 +180,7 @@ public class Main {
             sc.nextLine();
 
             if (selectNum == 1) {
-                System.out.println("----------------------게시판 메뉴-----------------------------------");
+                System.out.println("---------------------------게시판 메뉴------------------------------");
                 System.out.println("1.게시글 작성 | 2.게시글 조회 | 3.게시글 수정 | 4.게시글 삭제 | 5.이전메뉴");
                 System.out.println("------------------------------------------------------------------");
                 System.out.print("메뉴 선택> ");
@@ -123,6 +195,20 @@ public class Main {
                     System.out.print("내용 : ");
                     content = sc.nextLine();
                     boardInsert();
+                } else if (boardNum == 2) {
+                    selectBoards();
+                } else if (boardNum == 3) {
+                    System.out.print("수정할 게시글 번호 : ");
+                    boardId = sc.nextInt();
+                    System.out.print("수정할 제목 :");
+                    title = sc.next();
+                    System.out.print("수정할 내용 : ");
+                    content = sc.next();
+                    updateBoards();
+                } else if(boardNum == 4) {
+                    System.out.print("삭제할 게시글 번호 : ");
+                    boardId = sc.nextInt();
+                    deleteBoards();
                 }
 
             } else if (selectNum == 2) {
@@ -157,10 +243,9 @@ public class Main {
                     } else {
                         System.out.println("로그인 실패. 아이디나 비밀번호를 확인하세요.");
                     }
-
                 }
 
-                if(userNum == 3){
+                if (userNum == 3) {
                     continue;
                 }
 
