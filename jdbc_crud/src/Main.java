@@ -72,7 +72,8 @@ public class Main {
             pstmt.executeUpdate();
             System.out.println("회원가입이 성공적으로 완료되었습니다.");
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println("가입 실패! 중복 된 아이디 입니다.");
+//            e.printStackTrace();
         }
     }
 
