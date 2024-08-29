@@ -221,7 +221,7 @@ public class Main {
                 }
 
             } else if (selectNum == 2) {
-                System.out.println("-------------------------------");
+                System.out.println("------------회원 메뉴-----------");
                 System.out.println("1.회원 가입 | 2.로그인 | 3.이전메뉴");
                 System.out.println("-------------------------------");
                 System.out.print("메뉴 선택> ");
