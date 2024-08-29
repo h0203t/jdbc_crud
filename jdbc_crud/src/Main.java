@@ -1,15 +1,17 @@
 import db.Boards;
 import db.Users;
 
+import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
+    static SHA256 sha256 = new SHA256();
+
     private static List<Boards> boards = new ArrayList<>();
     private static List<Users> users = new ArrayList<>();
-
     public static Scanner sc = new Scanner(System.in);
 
     private static Connection conn = null;
@@ -20,13 +22,15 @@ public class Main {
     static String userId, password, tel = null;
     static String idCheck, pwCheck = null;
 
+    static String cryptogram = null;
+
     public static Connection dbConn() {
         if (conn == null) {
             try {
-                // JDBC 등록
+
                 Class.forName("oracle.jdbc.OracleDriver");
-                // 연결
-                conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521/xe", "javadb", "1234");
+
+                conn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.0.28:1521/xe", "javadb", "1234");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -67,13 +71,14 @@ public class Main {
 
         try (PreparedStatement pstmt = dbConn().prepareStatement(sql)) {
             pstmt.setString(1, userId);
-            pstmt.setString(2, password);
+            cryptogram = sha256.encrypt(password);
+            pstmt.setString(2, cryptogram);
             pstmt.setString(3, tel);
             pstmt.executeUpdate();
             System.out.println("회원가입이 성공적으로 완료되었습니다.");
-        } catch (SQLException e) {
-            System.out.println("가입 실패! 중복 된 아이디 입니다.");
-//            e.printStackTrace();
+        } catch (SQLException | NoSuchAlgorithmException e) {
+//            System.out.println("가입 실패! 중복 된 아이디 입니다.");
+            e.printStackTrace();
         }
     }
 
@@ -82,20 +87,23 @@ public class Main {
         try (Connection conn = dbConn();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, idCheck);
+             pstmt.setString(1, idCheck);
 
-            ResultSet rs = pstmt.executeQuery();
-                if (rs.next()) {
-                    String dbPassword = rs.getString("password");
-                    if (dbPassword.equals(password)) {
-                        return true;
-                    }
-                }
+             ResultSet rs = pstmt.executeQuery();
+             if (rs.next()) {
 
-        } catch (SQLException e) {
+                 String dbPassword = rs.getString("password");
+
+                 String encryptedPassword = sha256.encrypt(password);
+
+                 if (dbPassword.equals(encryptedPassword)) {
+                    return true;
+                 }
+             }
+        } catch (SQLException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-        return false;
+        return false; // 로그인 실패
     }
 
     public static void selectBoards() {
